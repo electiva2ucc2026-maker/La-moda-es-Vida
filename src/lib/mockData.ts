@@ -68,5 +68,19 @@ export const mockClients: Client[] = [
     lastPurchase: "2024-02-20",
     documents: [],
     pendingFields: ["Documento Identidad", "RUT", "Certificado Existencia"]
+  },
+  {
+    id: "4",
+    documentType: "CC",
+    documentNumber: "1130652833",
+    firstName: "Yuli",
+    lastName: "",
+    email: "brayan@example.com",
+    phone: "3188645305",
+    address: "Cra 28 #72-69",
+    city: "Bogotá",
+    lastPurchase: "2025-05-30",
+    documents: [],
+    pendingFields: ["Documento de Identificación", "RUT", "Cámara de Comercio"]
   }
 ];
