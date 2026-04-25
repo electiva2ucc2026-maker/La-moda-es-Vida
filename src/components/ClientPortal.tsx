@@ -19,6 +19,18 @@ export default function ClientPortal() {
   const [isUploading, setIsUploading] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<ClientDocument | null>(null);
 
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [newUser, setNewUser] = useState<Partial<Client>>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "Bogotá",
+    documents: [],
+    pendingFields: ["Cédula", "RUT"]
+  });
+
   const handleSearch = () => {
     if (!docType || !docNumber) {
       setError("Por favor complete todos los campos.");
@@ -28,6 +40,7 @@ export default function ClientPortal() {
     setIsSearching(true);
     setError(null);
     setClient(null);
+    setIsCreatingUser(false);
 
     setTimeout(() => {
       const foundClient = mockClients.find(
@@ -61,9 +74,47 @@ export default function ClientPortal() {
           documents: [...client.documents, newDoc],
           pendingFields: client.pendingFields.length > 0 ? client.pendingFields.slice(1) : []
         });
+      } else if (isCreatingUser) {
+        const fileUrl = file ? URL.createObjectURL(file) : "https://picsum.photos/seed/doc/800/1100";
+        const newDoc: ClientDocument = {
+          id: `d${Date.now()}`,
+          name: file ? file.name : "Documento_Registro.pdf",
+          type: file?.type.includes("image") ? "IMAGE" : "PDF",
+          uploadDate: new Date().toISOString().split('T')[0],
+          url: fileUrl
+        };
+        setNewUser(prev => ({
+          ...prev,
+          documents: [...(prev.documents || []), newDoc]
+        }));
       }
       setIsUploading(false);
     }, 1500);
+  };
+
+  const handleCreateUser = () => {
+    if (!newUser.firstName || !newUser.lastName || !newUser.email) {
+      setError("Por favor complete los campos obligatorios del nuevo usuario.");
+      return;
+    }
+
+    const createdClient: Client = {
+      id: `c${Date.now()}`,
+      documentType: docType,
+      documentNumber: docNumber,
+      firstName: newUser.firstName!,
+      lastName: newUser.lastName!,
+      email: newUser.email!,
+      phone: newUser.phone || "",
+      address: newUser.address || "",
+      city: newUser.city || "Bogotá",
+      documents: newUser.documents || [],
+      pendingFields: newUser.pendingFields || []
+    };
+
+    setClient(createdClient);
+    setIsCreatingUser(false);
+    setError(null);
   };
 
   const handleDelete = (docId: string) => {
@@ -164,10 +215,25 @@ export default function ClientPortal() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="mt-6 p-4 bg-red-50 border border-red-100 rounded-md flex items-center text-red-600 text-sm"
+                  className="mt-6 p-6 bg-red-50 border border-red-100 rounded-md flex flex-col gap-4"
                 >
-                  <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-                  {error}
+                  <div className="flex items-center text-red-600 text-sm">
+                    <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+                    {error}
+                  </div>
+                  
+                  {!isCreatingUser && !client && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setIsCreatingUser(true);
+                        setError(null);
+                      }}
+                      className="w-fit border-red-200 text-red-600 hover:bg-red-100 uppercase tracking-widest text-[10px] font-bold"
+                    >
+                      <UserCheck className="w-4 h-4 mr-2" /> Crear usuario nuevo
+                    </Button>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -175,6 +241,151 @@ export default function ClientPortal() {
         </Card>
 
         <AnimatePresence>
+          {isCreatingUser && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="mb-12"
+            >
+              <Card className="border-brand-gold/30 shadow-xl overflow-hidden">
+                <CardHeader className="bg-brand-gold/10 border-b border-brand-gold/20">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle className="text-xl text-zinc-900">Registro de Nuevo Cliente</CardTitle>
+                      <CardDescription>Complete el perfil para el documento {docType} {docNumber}</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setIsCreatingUser(false)}>
+                      <X className="w-5 h-5 text-zinc-400" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 bg-white">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase tracking-widest">Nombres *</Label>
+                          <Input 
+                            value={newUser.firstName} 
+                            onChange={(e) => setNewUser({...newUser, firstName: e.target.value})} 
+                            placeholder="Ej: Laura"
+                            className="focus:ring-brand-gold"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase tracking-widest">Apellidos *</Label>
+                          <Input 
+                            value={newUser.lastName} 
+                            onChange={(e) => setNewUser({...newUser, lastName: e.target.value})} 
+                            placeholder="Ej: Restrepo"
+                            className="focus:ring-brand-gold"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-[10px] uppercase tracking-widest">Email *</Label>
+                        <Input 
+                          type="email"
+                          value={newUser.email} 
+                          onChange={(e) => setNewUser({...newUser, email: e.target.value})} 
+                          placeholder="laura@moda.com"
+                          className="focus:ring-brand-gold"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase tracking-widest">Teléfono</Label>
+                          <Input 
+                            value={newUser.phone} 
+                            onChange={(e) => setNewUser({...newUser, phone: e.target.value})} 
+                            placeholder="+57 3..."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase tracking-widest">Ciudad</Label>
+                          <Input 
+                            value={newUser.city} 
+                            onChange={(e) => setNewUser({...newUser, city: e.target.value})} 
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-[10px] uppercase tracking-widest">Dirección</Label>
+                        <Input 
+                          value={newUser.address} 
+                          onChange={(e) => setNewUser({...newUser, address: e.target.value})} 
+                          placeholder="Calle..."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-zinc-50 p-6 rounded-xl border border-zinc-100 flex flex-col h-full">
+                      <h5 className="text-[10px] uppercase tracking-[0.2em] text-zinc-400 font-bold mb-4">Documentación Inicial</h5>
+                      
+                      <div className="flex-1 overflow-auto space-y-3 mb-6">
+                        {newUser.documents?.map((doc) => (
+                          <div key={doc.id} className="flex items-center justify-between p-3 bg-white border border-zinc-100 rounded-lg shadow-sm">
+                            <div className="flex items-center gap-3">
+                              <FileText className="w-4 h-4 text-brand-emerald" />
+                              <span className="text-xs font-medium truncate max-w-[150px]">{doc.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400" onClick={() => setPreviewDoc(doc)}>
+                                <EyeIcon size={14} />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-red-500" onClick={() => setNewUser(prev => ({...prev, documents: prev.documents?.filter(d => d.id !== doc.id)}))}>
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {(newUser.documents?.length || 0) === 0 && (
+                          <div className="py-6 text-center border border-dashed border-zinc-200 rounded-lg">
+                            <p className="text-[10px] text-zinc-400 uppercase">Sin archivos adjuntos</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div 
+                          onDragOver={onDragOver}
+                          onDragLeave={onDragLeave}
+                          onDrop={onDrop}
+                          className={`border-2 border-dashed rounded-lg p-4 text-center transition-all cursor-pointer relative bg-white ${
+                            isDragging ? "border-brand-gold bg-amber-50 scale-[1.02]" : "border-zinc-200 hover:border-brand-gold/50"
+                          }`}
+                        >
+                          <input 
+                            type="file" 
+                            className="absolute inset-0 opacity-0 cursor-pointer" 
+                            onChange={onFileSelect}
+                          />
+                          <Upload className={`w-6 h-6 mx-auto mb-1 ${isDragging ? "text-brand-gold" : "text-zinc-300"}`} />
+                          <p className="text-[9px] uppercase tracking-widest text-zinc-400">
+                            {isDragging ? "Suelta aquí" : "Adjuntar documentos"}
+                          </p>
+                        </div>
+                        
+                        <Button 
+                          onClick={handleCreateUser}
+                          disabled={isUploading}
+                          className="w-full bg-brand-emerald hover:bg-emerald-900 text-white font-bold uppercase tracking-widest text-[10px] h-11 btn-interactive"
+                        >
+                          Finalizar Registro y Guardar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           {client && (
             <motion.div
               initial={{ opacity: 0, y: 30 }}
